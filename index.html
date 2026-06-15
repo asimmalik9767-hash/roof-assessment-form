@@ -272,6 +272,34 @@ const STORAGE_KEY = 'roof_leads_v1';
 function getLeads() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; } }
 function saveLeads(leads) { localStorage.setItem(STORAGE_KEY, JSON.stringify(leads)); }
 
+const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzJs9dgKPJLR_lVVyfGikr2vydHTGvtE_1qQ4Dp5XBDY_IXy-jYRBGfDV-pHEJ-Mag/exec';
+
+function sendToSheet(submission, brand) {
+  const a = submission.answers;
+  const result = scoreLead(a);
+  const payload = {
+    brand: brand.name,
+    name: a.name || '',
+    address: a.address || '',
+    phone: a.phone || '',
+    coverage: a.coverage || '',
+    yearBuilt: a.yearBuilt || '',
+    damage: a.damage || '',
+    timing: a.timing || '',
+    score: result.score,
+    tier: result.tier
+  };
+
+  fetch(SHEET_WEBHOOK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  }).catch(err => {
+    console.error('Failed to send lead to sheet:', err);
+  });
+}
+
 if (isAdmin) {
   renderAdmin();
 } else {
@@ -503,6 +531,7 @@ function renderForm() {
     const leads = getLeads();
     leads.push(submission);
     saveLeads(leads);
+    sendToSheet(submission, brand);
 
     body.innerHTML = `
       <div class="confirm-screen">
